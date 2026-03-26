@@ -1,0 +1,132 @@
+all:
+  children:
+    isp_alpha:
+      hosts:
+        R1-Alpha-Edge:
+          asn: 100
+          role: edge
+          loopback: 1.1.1.1
+          interfaces:
+            eth0: 10.0.12.1/30
+            eth1: 10.0.100.1/30
+          ospf_networks:
+            - 1.1.1.1/32 area 0
+            - 10.0.100.0/30 area 0
+          bgp:
+            neighbors:
+              - {ip: 2.2.2.2, remote_as: 100, type: ibgp, update_source: lo, next_hop_self: true}
+              - {ip: 10.0.12.2, remote_as: 200, type: ebgp}
+            networks:
+              - 100.100.0.0/16
+        R2-Alpha-Core:
+          asn: 100
+          role: core
+          loopback: 2.2.2.2
+          interfaces:
+            eth1: 10.0.100.2/30
+            eth2: 10.0.24.1/30
+            eth3: 10.0.25.1/30
+          ospf_networks:
+            - 2.2.2.2/32 area 0
+            - 10.0.100.0/30 area 0
+          bgp:
+            neighbors:
+              - {ip: 1.1.1.1, remote_as: 100, type: ibgp, update_source: lo, next_hop_self: true}
+              - {ip: 10.0.24.2, remote_as: 200, type: ebgp}
+              - {ip: 10.0.25.2, remote_as: 300, type: ebgp}
+            networks:
+              - 100.100.0.0/16
+          prefix_lists:
+            - {name: FILTER-AS300, neighbor: 10.0.25.2, direction: in, entries: ["seq 5 permit 150.150.0.0/16", "seq 10 permit 172.16.0.0/16", "seq 15 permit 10.10.10.0/24", "seq 100 deny any"]}
+    isp_bravo:
+      hosts:
+        R3-Bravo-Edge:
+          asn: 200
+          role: edge
+          loopback: 3.3.3.3
+          interfaces:
+            eth0: 10.0.12.2/30
+            eth1: 10.0.200.1/30
+          ospf_networks:
+            - 3.3.3.3/32 area 0
+            - 10.0.200.0/30 area 0
+          bgp:
+            neighbors:
+              - {ip: 4.4.4.4, remote_as: 200, type: ibgp, update_source: lo, next_hop_self: true}
+              - {ip: 10.0.12.1, remote_as: 100, type: ebgp}
+            networks:
+              - 200.200.0.0/16
+        R4-Bravo-Core:
+          asn: 200
+          role: core
+          loopback: 4.4.4.4
+          interfaces:
+            eth1: 10.0.200.2/30
+            eth2: 10.0.24.2/30
+            eth3: 10.0.46.1/30
+            eth4: 10.0.48.1/30
+          ospf_networks:
+            - 4.4.4.4/32 area 0
+            - 10.0.200.0/30 area 0
+          bgp:
+            neighbors:
+              - {ip: 3.3.3.3, remote_as: 200, type: ibgp, update_source: lo, next_hop_self: true}
+              - {ip: 10.0.24.1, remote_as: 100, type: ebgp}
+              - {ip: 10.0.46.2, remote_as: 400, type: ebgp}
+            networks:
+              - 200.200.0.0/16
+          prefix_lists:
+            - {name: FILTER-AS400, neighbor: 10.0.46.2, direction: in, entries: ["seq 5 permit 172.16.0.0/16", "seq 100 deny any"]}
+          static_routes:
+            - 10.0.64.0/30 10.0.48.2
+    isp_charlie:
+      hosts:
+        R5-Charlie:
+          asn: 300
+          role: regional
+          loopback: 5.5.5.5
+          interfaces:
+            eth0: 10.0.25.2/30
+            eth1: 10.0.56.1/30
+            eth2: 10.0.57.1/30
+          bgp:
+            neighbors:
+              - {ip: 10.0.25.1, remote_as: 100, type: ebgp}
+              - {ip: 10.0.56.2, remote_as: 400, type: ebgp}
+              - {ip: 10.0.57.2, remote_as: 500, type: ebgp, password: SecureISP2026}
+            networks:
+              - 150.150.0.0/16
+          prefix_lists:
+            - {name: FILTER-AS500, neighbor: 10.0.57.2, direction: in, entries: ["seq 5 permit 10.10.10.0/24", "seq 100 deny any"]}
+            - {name: FILTER-AS400, neighbor: 10.0.56.2, direction: in, entries: ["seq 5 permit 172.16.0.0/16", "seq 100 deny any"]}
+    customer:
+      hosts:
+        R6-Customer:
+          asn: 400
+          role: customer
+          loopback: 6.6.6.6
+          interfaces:
+            eth0: 10.0.46.2/30
+            eth1: 10.0.56.2/30
+            eth2: 10.0.64.2/30
+          bgp:
+            neighbors:
+              - {ip: 10.0.46.1, remote_as: 200, type: ebgp}
+              - {ip: 10.0.56.1, remote_as: 300, type: ebgp}
+            networks:
+              - 172.16.0.0/16
+          static_routes:
+            - 10.0.48.0/30 10.0.64.1
+    attacker:
+      hosts:
+        R7-Attacker:
+          asn: 500
+          role: rogue
+          loopback: 7.7.7.7
+          interfaces:
+            eth0: 10.0.57.2/30
+          bgp:
+            neighbors:
+              - {ip: 10.0.57.1, remote_as: 300, type: ebgp, password: SecureISP2026}
+            networks:
+              - 10.10.10.0/24
